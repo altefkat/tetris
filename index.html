@@ -13,13 +13,14 @@
             border: 2px solid #000;
             display: block;
             margin: 20px auto;
+            background-color: #111;
         }
     </style>
 </head>
 <body>
     <h1>Tetris Avancé</h1>
     <div>
-        <span id="score">Score: 0</span> | <span id="lines">Lignes: 0</span> | <span id="level">Niveau: 1</span> | <span id="timer">Temps: 0s</span>
+        <span id="score">Score: 0</span> | <span id="topScore">Meilleur: 0</span> | <span id="lines">Lignes: 0</span> | <span id="level">Niveau: 1</span> | <span id="timer">Temps: 0s</span>
     </div>
     <button onclick="restartGame()">Redémarrer</button>
     <canvas id="tetris" width="240" height="400"></canvas>
@@ -32,9 +33,14 @@
         const arena = createMatrix(12, 20);
         const player = { pos: { x: 5, y: 0 }, matrix: null, score: 0, lines: 0, level: 1 };
         const scoreDisplay = document.getElementById('score');
+        const topScoreDisplay = document.getElementById('topScore');
         const linesDisplay = document.getElementById('lines');
         const levelDisplay = document.getElementById('level');
         const timerDisplay = document.getElementById('timer');
+
+        let topScore = parseInt(localStorage.getItem('topScore')) || 0;
+        topScoreDisplay.textContent = `Meilleur: ${topScore}`;
+
         let startTime = Date.now();
         let dropInterval = 1000;
 
@@ -79,7 +85,16 @@
         }
 
         function drawMatrix(matrix, offset) {
-            const colors = [null, 'purple', 'yellow', 'orange', 'blue', 'cyan', 'green', 'red'];
+            const colors = [
+                null,
+                '#6A5ACD',  // SlateBlue
+                '#9370DB',  // MediumPurple
+                '#7B68EE',  // MediumSlateBlue
+                '#483D8B',  // DarkSlateBlue
+                '#00BFFF',  // DeepSkyBlue
+                '#1E90FF',  // DodgerBlue
+                '#4169E1'   // RoyalBlue
+            ];
             matrix.forEach((row, y) => row.forEach((value, x) => {
                 if (value !== 0) {
                     context.fillStyle = colors[value];
@@ -114,10 +129,10 @@
                 arena.unshift(row);
                 y++;
                 player.score += rowCount * 100;
-                player.lines += 1;
+                player.lines++;
                 if (player.lines % 10 === 0) {
                     player.level++;
-                    dropInterval = Math.max(100, dropInterval - 100);
+                    dropInterval = Math.max(50, dropInterval - 50);
                 }
                 rowCount *= 2;
             }
@@ -129,6 +144,10 @@
                 player.pos.y--;
                 merge(arena, player);
                 arenaSweep();
+                if (player.score > topScore) {
+                    topScore = player.score;
+                    localStorage.setItem('topScore', topScore);
+                }
                 updateScore();
                 playerReset();
             }
@@ -151,6 +170,7 @@
 
         function updateScore() {
             scoreDisplay.textContent = `Score: ${player.score}`;
+            topScoreDisplay.textContent = `Meilleur: ${topScore}`;
             linesDisplay.textContent = `Lignes: ${player.lines}`;
             levelDisplay.textContent = `Niveau: ${player.level}`;
         }
@@ -170,15 +190,19 @@
         });
 
         let dropCounter = 0, lastTime = 0;
+
         function update(time = 0) {
             const deltaTime = time - lastTime;
             lastTime = time;
             dropCounter += deltaTime;
             if (dropCounter > dropInterval) playerDrop();
-            context.fillStyle = '#000';
+
+            context.fillStyle = '#111';
             context.fillRect(0, 0, canvas.width, canvas.height);
+
             drawMatrix(arena, { x: 0, y: 0 });
             drawMatrix(player.matrix, player.pos);
+
             requestAnimationFrame(update);
         }
 
