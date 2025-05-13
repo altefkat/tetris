@@ -17,7 +17,10 @@
     </style>
 </head>
 <body>
-    <h1>Tetris en HTML avec Couleurs et Rotation</h1>
+    <h1>Tetris en HTML avec Couleurs, Rotation, Timer et Score</h1>
+    <div>
+        <span id="score">Score: 0</span> | <span id="timer">Temps: 0s</span>
+    </div>
     <canvas id="tetris" width="240" height="400"></canvas>
 
     <script>
@@ -29,8 +32,21 @@
 
         const player = {
             pos: { x: 5, y: 0 },
-            matrix: createPiece(randomPieceType())
+            matrix: createPiece(randomPieceType()),
+            score: 0
         };
+
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+
+        let startTime = Date.now();
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            timerDisplay.textContent = `Temps: ${elapsed}s`;
+        }
+
+        setInterval(updateTimer, 1000);
 
         function createMatrix(w, h) {
             const matrix = [];
@@ -97,6 +113,8 @@
             if (collide(arena, player)) {
                 player.pos.y--;
                 merge(arena, player);
+                player.score += 10;
+                updateScore();
                 playerReset();
             }
             dropCounter = 0;
@@ -108,7 +126,13 @@
             player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
             if (collide(arena, player)) {
                 arena.forEach(row => row.fill(0));
+                player.score = 0;
+                updateScore();
             }
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = `Score: ${player.score}`;
         }
 
         function rotate(matrix, dir = 1) {
