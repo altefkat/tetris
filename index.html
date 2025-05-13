@@ -117,8 +117,12 @@
             for (let y = 0; y < m.length; ++y) {
                 for (let x = 0; x < m[y].length; ++x) {
                     if (m[y][x] !== 0) {
-                        if (!arena[y + o.y] || !arena[y + o.y][x + o.x]) continue;
-                        if (arena[y + o.y][x + o.x] !== 0) return true;
+                        if (o.x + x < 0 || o.x + x >= arena[0].length || o.y + y >= arena.length) {
+                            return true;
+                        }
+                        if (arena[o.y + y] && arena[o.y + y][o.x + x] !== 0) {
+                            return true;
+                        }
                     }
                 }
             }
