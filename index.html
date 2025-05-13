@@ -3,22 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris Avancé</title>
+    <title>Tetris Bleu Violet Stylé</title>
     <style>
         body {
             text-align: center;
             font-family: Arial, sans-serif;
+            background-color: #0d0d1a;
+            color: #ddd;
         }
         canvas {
-            border: 2px solid #000;
+            border: 2px solid #333;
             display: block;
             margin: 20px auto;
-            background-color: #111;
+            background-color: #111122;
         }
     </style>
 </head>
 <body>
-    <h1>Tetris Avancé</h1>
+    <h1>Tetris Bleu Violet Stylé</h1>
     <div>
         <span id="score">Score: 0</span> | <span id="topScore">Meilleur: 0</span> | <span id="lines">Lignes: 0</span> | <span id="level">Niveau: 1</span> | <span id="timer">Temps: 0s</span>
     </div>
@@ -87,13 +89,13 @@
         function drawMatrix(matrix, offset) {
             const colors = [
                 null,
-                '#6A5ACD',  // SlateBlue
-                '#9370DB',  // MediumPurple
-                '#7B68EE',  // MediumSlateBlue
-                '#483D8B',  // DarkSlateBlue
-                '#00BFFF',  // DeepSkyBlue
-                '#1E90FF',  // DodgerBlue
-                '#4169E1'   // RoyalBlue
+                '#4B0082', // Indigo foncé
+                '#6A0DAD', // Violet vibrant
+                '#7B68EE', // Medium Slate Blue
+                '#8A2BE2', // Blue Violet
+                '#00BFFF', // Deep Sky Blue
+                '#1E90FF', // Dodger Blue
+                '#4169E1'  // Royal Blue
             ];
             matrix.forEach((row, y) => row.forEach((value, x) => {
                 if (value !== 0) {
@@ -197,7 +199,7 @@
             dropCounter += deltaTime;
             if (dropCounter > dropInterval) playerDrop();
 
-            context.fillStyle = '#111';
+            context.fillStyle = '#111122';
             context.fillRect(0, 0, canvas.width, canvas.height);
 
             drawMatrix(arena, { x: 0, y: 0 });
