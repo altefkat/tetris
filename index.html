@@ -4,23 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tetris pour les bg</title>
-   <style>
-  body {
-    text-align: center;
-    font-family: Arial, sans-serif;
-    background: url('./background.png') center center / cover no-repeat;
-    color: #ddd;
-  }
-  canvas {
-    border: 4px solid #6A0DAD;
-    border-radius: 12px;
-    box-shadow: 0 0 20px #6A0DAD, 0 0 40px #220044;
-    display: block;
-    margin: 20px auto;
-    background-color: rgba(0, 0, 0, 0.7);
-  }
-</style>
-
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background: url('./background.png') center center / cover no-repeat;
+            color: #ddd;
+        }
+        canvas {
+            border: 4px solid #6A0DAD;
+            border-radius: 12px;
+            box-shadow: 0 0 20px #6A0DAD, 0 0 40px #220044;
+            display: block;
+            margin: 20px auto;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+    </style>
 </head>
 <body>
     <h1>Tetris pour les bg</h1>
@@ -49,6 +48,18 @@
         let startTime = Date.now();
         let dropInterval = 600;
 
+        let pieceBag = [];
+        function randomPieceType() {
+            if (pieceBag.length === 0) {
+                pieceBag = 'TOLJISZ'.split('');
+                for (let i = pieceBag.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pieceBag[i], pieceBag[j]] = [pieceBag[j], pieceBag[i]];
+                }
+            }
+            return pieceBag.pop();
+        }
+
         function restartGame() {
             arena.forEach(row => row.fill(0));
             player.score = 0;
@@ -72,11 +83,6 @@
             return matrix;
         }
 
-        function randomPieceType() {
-            const pieces = 'TOLJISZ';
-            return pieces[Math.floor(Math.random() * pieces.length)];
-        }
-
         function createPiece(type) {
             switch (type) {
                 case 'T': return [[0,0,0],[1,1,1],[0,1,0]];
@@ -90,16 +96,7 @@
         }
 
         function drawMatrix(matrix, offset) {
-            const colors = [
-                null,
-                '#4B0082', // Indigo foncé
-                '#6A0DAD', // Violet vibrant
-                '#7B68EE', // Medium Slate Blue
-                '#8A2BE2', // Blue Violet
-                '#00BFFF', // Deep Sky Blue
-                '#1E90FF', // Dodger Blue
-                '#4169E1'  // Royal Blue
-            ];
+            const colors = [null, '#4B0082', '#6A0DAD', '#7B68EE', '#8A2BE2', '#00BFFF', '#1E90FF', '#4169E1'];
             matrix.forEach((row, y) => row.forEach((value, x) => {
                 if (value !== 0) {
                     context.fillStyle = colors[value];
@@ -188,10 +185,22 @@
         }
 
         document.addEventListener('keydown', event => {
-            if (event.key === 'ArrowLeft') { player.pos.x--; if (collide(arena, player)) player.pos.x++; }
-            else if (event.key === 'ArrowRight') { player.pos.x++; if (collide(arena, player)) player.pos.x--; }
-            else if (event.key === 'ArrowDown') playerDrop();
-            else if (event.key === ' ') { rotate(player.matrix); if (collide(arena, player)) rotate(player.matrix, -1); }
+            if (event.key === 'ArrowLeft') {
+                player.pos.x--;
+                if (collide(arena, player)) player.pos.x++;
+            } else if (event.key === 'ArrowRight') {
+                player.pos.x++;
+                if (collide(arena, player)) player.pos.x--;
+            } else if (event.key === 'ArrowDown') {
+                playerDrop();
+            } else if (event.key === ' ') {
+                rotate(player.matrix);
+                if (collide(arena, player)) {
+                    player.pos.x++;
+                    if (collide(arena, player)) player.pos.x -= 2;
+                    if (collide(arena, player)) rotate(player.matrix, -1);
+                }
+            }
         });
 
         let dropCounter = 0, lastTime = 0;
