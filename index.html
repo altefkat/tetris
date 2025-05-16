@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris pour les bg</title>
+    <title>Tetris Leaderboard BG</title>
     <style>
         body {
             text-align: center;
@@ -19,6 +19,18 @@
             margin: 20px auto;
             background-color: rgba(0, 0, 0, 0.7);
         }
+        #leaderboard {
+            margin: 15px auto 20px auto;
+            width: 350px;
+            background: rgba(16, 7, 30, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 0 8px #6A0DAD;
+            padding: 10px;
+            color: #fff;
+        }
+        #leaderboard th, #leaderboard td {
+            padding: 3px 8px;
+        }
         #userBar {
             margin: 10px 0;
             font-size: 18px;
@@ -32,26 +44,83 @@
     <audio id="bgMusic" src="./music.mp3" autoplay loop></audio>
     <div>
         <span id="score">Score: 0</span> | 
-        <span id="topScore">Meilleur: 0</span> | 
-        <span id="topUser">Joueur: -</span> | 
         <span id="lines">Lignes: 0</span> | 
         <span id="level">Niveau: 1</span> | 
         <span id="timer">Temps: 0s</span>
     </div>
     <button onclick="restartGame()">Redémarrer</button>
     <canvas id="tetris" width="340" height="400"></canvas>
+    <div id="leaderboard">
+        <b>Leaderboard mondial</b>
+        <table id="lbTable" style="width:100%;margin-top:5px;">
+            <thead><tr><th>Pos</th><th>Pseudo</th><th>Score</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
     <script>
-        // --- Saisie utilisateur ---
-        let username = localStorage.getItem('tetrisUser');
-        function askUsername() {
-            username = prompt("Entre ton pseudo pour le classement :", username || "");
-            if (!username) username = "Anonyme";
-            localStorage.setItem('tetrisUser', username);
+        // === CONFIG JSONBIN ===
+        const API_KEY = "TA_CLE_PRIVEE_ICI"; // <-- mets ta clé
+        const BIN_ID = "6825bd578561e97a5014584f"; // <-- mets ton id
+        const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+        let leaderboard = [];
+        let username = null;
+
+        // === Fonction pour demander pseudo à chaque partie ===
+        function askUsername(force) {
+            username = localStorage.getItem('tetrisUser');
+            if (!username || force) {
+                username = prompt("Entrez votre pseudo pour le classement :", username || "");
+                if (!username) username = "Anonyme";
+                localStorage.setItem('tetrisUser', username);
+            }
             document.getElementById('userBar').textContent = `Tu joues en tant que : ${username}`;
         }
-        askUsername();
+        askUsername(true);
 
-        // --- Tetris code habituel ---
+        // === Leaderboard ===
+        function renderLeaderboard() {
+            leaderboard.sort((a, b) => b.score - a.score);
+            let tbody = document.querySelector('#lbTable tbody');
+            tbody.innerHTML = "";
+            leaderboard.slice(0, 10).forEach((entry, idx) => {
+                let row = document.createElement('tr');
+                row.innerHTML = `<td>${idx + 1}</td><td>${entry.user}</td><td>${entry.score}</td>`;
+                tbody.appendChild(row);
+            });
+        }
+
+        function fetchLeaderboard() {
+            fetch(BIN_URL, { headers: { "X-Master-Key": API_KEY } })
+            .then(res => res.json())
+            .then(data => {
+                leaderboard = data.record.scores || [];
+                renderLeaderboard();
+            });
+        }
+
+        function updateLeaderboard(newScore) {
+            // Ajoute ou update le score du user si meilleur score
+            let found = false;
+            leaderboard = leaderboard.map(entry => {
+                if (entry.user === username) {
+                    found = true;
+                    return { user: username, score: Math.max(newScore, entry.score) };
+                }
+                return entry;
+            });
+            if (!found) leaderboard.push({ user: username, score: newScore });
+            // Save to bin
+            fetch(BIN_URL, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Master-Key": API_KEY
+                },
+                body: JSON.stringify({ scores: leaderboard })
+            }).then(() => renderLeaderboard());
+        }
+
+        // === TETRIS CLASSIQUE ===
         const canvas = document.getElementById('tetris');
         const context = canvas.getContext('2d');
         context.scale(20, 20);
@@ -59,28 +128,9 @@
         const arena = createMatrix(17, 20);
         const player = { pos: { x: 5, y: 0 }, matrix: null, score: 0, lines: 0, level: 1 };
         const scoreDisplay = document.getElementById('score');
-        const topScoreDisplay = document.getElementById('topScore');
-        const topUserDisplay = document.getElementById('topUser');
         const linesDisplay = document.getElementById('lines');
         const levelDisplay = document.getElementById('level');
         const timerDisplay = document.getElementById('timer');
-
-        // --- API JSONBIN (adapté à ton bin) ---
-        const API_KEY = "TA_CLE_PRIVEE_ICI"; // Mets ici ta clé X-MASTER-KEY
-        const BIN_ID = "6825bd578561e97a5014584f";
-        const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-
-        let topScore = 0;
-        let topUser = "Personne";
-        fetch(BIN_URL, {
-            headers: { "X-Master-Key": API_KEY }
-        })
-        .then(res => res.json())
-        .then(data => {
-            topScore = data.record.topScore || 0;
-            topUser = data.record.topUser || "Personne";
-            updateScore();
-        });
 
         let startTime = Date.now();
         let dropInterval = 600;
@@ -98,6 +148,7 @@
         }
 
         function restartGame() {
+            askUsername(true);
             arena.forEach(row => row.fill(0));
             player.score = 0;
             player.lines = 0;
@@ -198,20 +249,11 @@
                 player.pos.y--;
                 merge(arena, player);
                 arenaSweep();
-                if (player.score > topScore) {
-                    topScore = player.score;
-                    topUser = username;
-                    localStorage.setItem('topScore', topScore);
-
-                    // Sauvegarde topScore + username dans ton bin
-                    fetch(BIN_URL, {
-                        method: "PUT",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Master-Key": API_KEY
-                        },
-                        body: JSON.stringify({ topScore, topUser })
-                    });
+                if (leaderboard.length === 0) fetchLeaderboard();
+                // On ne sauvegarde QUE SI meilleur score pour cet utilisateur !
+                let prev = leaderboard.find(entry => entry.user === username);
+                if (!prev || player.score > prev.score) {
+                    updateLeaderboard(player.score);
                 }
                 updateScore();
                 playerReset();
@@ -235,8 +277,6 @@
 
         function updateScore() {
             scoreDisplay.textContent = `Score: ${player.score}`;
-            topScoreDisplay.textContent = `Meilleur: ${topScore}`;
-            topUserDisplay.textContent = `Joueur: ${topUser}`;
             linesDisplay.textContent = `Lignes: ${player.lines}`;
             levelDisplay.textContent = `Niveau: ${player.level}`;
         }
@@ -284,6 +324,7 @@
             requestAnimationFrame(update);
         }
 
+        fetchLeaderboard();
         playerReset();
         updateScore();
         update();
