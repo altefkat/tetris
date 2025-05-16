@@ -19,17 +19,39 @@
             margin: 20px auto;
             background-color: rgba(0, 0, 0, 0.7);
         }
+        #userBar {
+            margin: 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <h1>Tetris pour les bg</h1>
+    <div id="userBar"></div>
+    <audio id="bgMusic" src="./music.mp3" autoplay loop></audio>
     <div>
-        <span id="score">Score: 0</span> | <span id="topScore">Meilleur: 0</span> | <span id="lines">Lignes: 0</span> | <span id="level">Niveau: 1</span> | <span id="timer">Temps: 0s</span>
+        <span id="score">Score: 0</span> | 
+        <span id="topScore">Meilleur: 0</span> | 
+        <span id="topUser">Joueur: -</span> | 
+        <span id="lines">Lignes: 0</span> | 
+        <span id="level">Niveau: 1</span> | 
+        <span id="timer">Temps: 0s</span>
     </div>
     <button onclick="restartGame()">Redémarrer</button>
     <canvas id="tetris" width="340" height="400"></canvas>
-
     <script>
+        // --- Saisie utilisateur ---
+        let username = localStorage.getItem('tetrisUser');
+        function askUsername() {
+            username = prompt("Entre ton pseudo pour le classement :", username || "");
+            if (!username) username = "Anonyme";
+            localStorage.setItem('tetrisUser', username);
+            document.getElementById('userBar').textContent = `Tu joues en tant que : ${username}`;
+        }
+        askUsername();
+
+        // --- Tetris code habituel ---
         const canvas = document.getElementById('tetris');
         const context = canvas.getContext('2d');
         context.scale(20, 20);
@@ -38,17 +60,32 @@
         const player = { pos: { x: 5, y: 0 }, matrix: null, score: 0, lines: 0, level: 1 };
         const scoreDisplay = document.getElementById('score');
         const topScoreDisplay = document.getElementById('topScore');
+        const topUserDisplay = document.getElementById('topUser');
         const linesDisplay = document.getElementById('lines');
         const levelDisplay = document.getElementById('level');
         const timerDisplay = document.getElementById('timer');
 
-        let topScore = parseInt(localStorage.getItem('topScore')) || 0;
-        topScoreDisplay.textContent = `Meilleur: ${topScore}`;
+        // --- API JSONBIN (adapté à ton bin) ---
+        const API_KEY = "TA_CLE_PRIVEE_ICI"; // Mets ici ta clé X-MASTER-KEY
+        const BIN_ID = "6825bd578561e97a5014584f";
+        const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        let topScore = 0;
+        let topUser = "Personne";
+        fetch(BIN_URL, {
+            headers: { "X-Master-Key": API_KEY }
+        })
+        .then(res => res.json())
+        .then(data => {
+            topScore = data.record.topScore || 0;
+            topUser = data.record.topUser || "Personne";
+            updateScore();
+        });
 
         let startTime = Date.now();
         let dropInterval = 600;
-
         let pieceBag = [];
+
         function randomPieceType() {
             if (pieceBag.length === 0) {
                 pieceBag = 'TOLJISZ'.split('');
@@ -65,10 +102,16 @@
             player.score = 0;
             player.lines = 0;
             player.level = 1;
-            dropInterval = 1000;
+            dropInterval = 600;
+            updateMusicSpeed();
             playerReset();
             updateScore();
             startTime = Date.now();
+        }
+
+        function updateMusicSpeed() {
+            const audio = document.getElementById('bgMusic');
+            audio.playbackRate = 1 + (player.level - 1) * 0.1;
         }
 
         function updateTimer() {
@@ -140,9 +183,10 @@
                 y++;
                 player.score += rowCount * 100;
                 player.lines++;
-                if (player.lines % 10 === 0) {
+                if (player.lines % 6 === 0) {
                     player.level++;
                     dropInterval = Math.max(50, dropInterval - 50);
+                    updateMusicSpeed();
                 }
                 rowCount *= 2;
             }
@@ -156,7 +200,18 @@
                 arenaSweep();
                 if (player.score > topScore) {
                     topScore = player.score;
+                    topUser = username;
                     localStorage.setItem('topScore', topScore);
+
+                    // Sauvegarde topScore + username dans ton bin
+                    fetch(BIN_URL, {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Master-Key": API_KEY
+                        },
+                        body: JSON.stringify({ topScore, topUser })
+                    });
                 }
                 updateScore();
                 playerReset();
@@ -173,14 +228,15 @@
                 player.score = 0;
                 player.lines = 0;
                 player.level = 1;
-                dropInterval = 1000;
-                updateScore();
+                dropInterval = 600;
+                updateMusicSpeed();
             }
         }
 
         function updateScore() {
             scoreDisplay.textContent = `Score: ${player.score}`;
             topScoreDisplay.textContent = `Meilleur: ${topScore}`;
+            topUserDisplay.textContent = `Joueur: ${topUser}`;
             linesDisplay.textContent = `Lignes: ${player.lines}`;
             levelDisplay.textContent = `Niveau: ${player.level}`;
         }
